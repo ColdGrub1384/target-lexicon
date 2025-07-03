@@ -79,6 +79,7 @@ pub enum ArmArchitecture {
     Armv7,
     Armv7a,
     Armv7k,
+    Arm64_32,
     Armv7ve,
     Armv7m,
     Armv7r,
@@ -163,6 +164,7 @@ impl ArmArchitecture {
             | Armv7
             | Armv7a
             | Armv7k
+            | Arm64_32
             | Armv7ve
             | Armv7m
             | Armv7r
@@ -218,6 +220,7 @@ impl ArmArchitecture {
             | Armv7
             | Armv7a
             | Armv7k
+            | Arm64_32
             | Armv7ve
             | Armv7m
             | Armv7r
@@ -268,6 +271,7 @@ impl ArmArchitecture {
             | Armv7
             | Armv7a
             | Armv7k
+            | Arm64_32
             | Armv7ve
             | Armv7m
             | Armv7r
@@ -317,6 +321,7 @@ impl ArmArchitecture {
             Armv7 => Cow::Borrowed("armv7"),
             Armv7a => Cow::Borrowed("armv7a"),
             Armv7k => Cow::Borrowed("armv7k"),
+            Arm64_32 => Cow::Borrowed("arm64_32"),
             Armv7ve => Cow::Borrowed("armv7ve"),
             Armv7m => Cow::Borrowed("armv7m"),
             Armv7r => Cow::Borrowed("armv7r"),
@@ -1164,6 +1169,7 @@ impl FromStr for ArmArchitecture {
             "armv7" => Armv7,
             "armv7a" => Armv7a,
             "armv7k" => Armv7k,
+            "arm64_32" => Arm64_32,
             "armv7ve" => Armv7ve,
             "armv7m" => Armv7m,
             "armv7r" => Armv7r,
@@ -1699,7 +1705,7 @@ mod tests {
             "aarch64-unknown-uefi",
             "aarch64-uwp-windows-msvc",
             "aarch64-wrs-vxworks",
-            //"arm64_32-apple-watchos", // TODO
+            "arm64_32-apple-watchos",
             //"arm64e-apple-darwin", // TODO
             "amdgcn-amd-amdhsa",
             "amdgcn-amd-amdhsa-amdgiz",
