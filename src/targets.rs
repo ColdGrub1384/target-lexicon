@@ -56,6 +56,8 @@ pub enum Architecture {
     /// See https://wiki.polygon.technology/docs/category/zk-assembly/
     #[cfg(feature = "arch_zkasm")]
     ZkAsm,
+    #[cfg(feature = "arch_z80")]
+    Z80(Z80Architecture),
 }
 
 #[cfg_attr(feature = "rust_1_40", non_exhaustive)]
@@ -453,6 +455,7 @@ pub enum Riscv64Architecture {
     Riscv64,
     Riscv64gc,
     Riscv64imac,
+    Riscv64a23,
 }
 
 impl Riscv64Architecture {
@@ -464,6 +467,7 @@ impl Riscv64Architecture {
             Riscv64 => Cow::Borrowed("riscv64"),
             Riscv64gc => Cow::Borrowed("riscv64gc"),
             Riscv64imac => Cow::Borrowed("riscv64imac"),
+            Riscv64a23 => Cow::Borrowed("riscv64a23"),
         }
     }
 }
@@ -537,6 +541,43 @@ impl Mips64Architecture {
             Mips64el => Cow::Borrowed("mips64el"),
             Mipsisa64r6 => Cow::Borrowed("mipsisa64r6"),
             Mipsisa64r6el => Cow::Borrowed("mipsisa64r6el"),
+        }
+    }
+}
+
+#[cfg(feature = "arch_z80")]
+#[cfg_attr(feature = "rust_1_40", non_exhaustive)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[allow(missing_docs)]
+pub enum Z80Architecture {
+    Z80,
+    Z180,
+    Ez80,
+    Sm83,
+    Rabbit2000,
+    Rabbit2000A,
+    Rabbit3000,
+    Rabbit3000A,
+    Tlcs90,
+    R800,
+}
+
+#[cfg(feature = "arch_z80")]
+impl Z80Architecture {
+    pub fn into_str(self) -> Cow<'static, str> {
+        use Z80Architecture::*;
+
+        match self {
+            Z80 => Cow::Borrowed("z80"),
+            Z180 => Cow::Borrowed("z180"),
+            Ez80 => Cow::Borrowed("ez80"),
+            Sm83 => Cow::Borrowed("sm83"),
+            Rabbit2000 => Cow::Borrowed("rabbit2000"),
+            Rabbit2000A => Cow::Borrowed("rabbit2000a"),
+            Rabbit3000 => Cow::Borrowed("rabbit3000"),
+            Rabbit3000A => Cow::Borrowed("rabbit3000a"),
+            Tlcs90 => Cow::Borrowed("tlcs90"),
+            R800 => Cow::Borrowed("r800"),
         }
     }
 }
@@ -661,6 +702,7 @@ pub enum OperatingSystem {
     Bitrig,
     Cloudabi,
     Cuda,
+    Cygwin,
     /// The general [Darwin][darwin-wiki] core OS.
     ///
     /// Generally, `-mmacosx-version-min=...` or similar flags are required by
@@ -736,6 +778,7 @@ impl OperatingSystem {
             Bitrig => Cow::Borrowed("bitrig"),
             Cloudabi => Cow::Borrowed("cloudabi"),
             Cuda => Cow::Borrowed("cuda"),
+            Cygwin => Cow::Borrowed("cygwin"),
             Darwin(deployment_target) => darwin_version("darwin", deployment_target),
             Dragonfly => Cow::Borrowed("dragonfly"),
             Emscripten => Cow::Borrowed("emscripten"),
@@ -961,6 +1004,8 @@ impl Architecture {
             | Sparcv9 => Ok(Endianness::Big),
             #[cfg(feature="arch_zkasm")]
             ZkAsm => Ok(Endianness::Big),
+            #[cfg(feature = "arch_z80")]
+            Z80(_) => Ok(Endianness::Little),
         }
     }
 
@@ -1009,6 +1054,8 @@ impl Architecture {
             | Clever(_) => Ok(PointerWidth::U64),
             #[cfg(feature="arch_zkasm")]
             ZkAsm => Ok(PointerWidth::U64),
+            #[cfg(feature = "arch_z80")]
+            Z80(_) => Ok(PointerWidth::U16),
         }
     }
 
@@ -1062,6 +1109,8 @@ impl Architecture {
             Clever(ver) => ver.into_str(),
             #[cfg(feature = "arch_zkasm")]
             ZkAsm => Cow::Borrowed("zkasm"),
+            #[cfg(feature = "arch_z80")]
+            Z80(z80) => z80.into_str(),
         }
     }
 }
@@ -1134,6 +1183,13 @@ impl fmt::Display for Mips32Architecture {
 }
 
 impl fmt::Display for Mips64Architecture {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(&self.into_str())
+    }
+}
+
+#[cfg(feature = "arch_z80")]
+impl fmt::Display for Z80Architecture {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(&self.into_str())
     }
@@ -1256,6 +1312,7 @@ impl FromStr for Riscv64Architecture {
             "riscv64" => Riscv64,
             "riscv64gc" => Riscv64gc,
             "riscv64imac" => Riscv64imac,
+            "riscv64a23" => Riscv64a23,
             _ => return Err(()),
         })
     }
@@ -1303,6 +1360,29 @@ impl FromStr for Mips64Architecture {
             "mips64el" => Mips64el,
             "mipsisa64r6" => Mipsisa64r6,
             "mipsisa64r6el" => Mipsisa64r6el,
+            _ => return Err(()),
+        })
+    }
+}
+
+#[cfg(feature = "arch_z80")]
+impl FromStr for Z80Architecture {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, ()> {
+        use Z80Architecture::*;
+
+        Ok(match s {
+            "z80" => Z80,
+            "z180" => Z180,
+            "ez80" => Ez80,
+            "sm83" => Sm83,
+            "rabbit2000" => Rabbit2000,
+            "rabbit2000a" => Rabbit2000A,
+            "rabbit3000" => Rabbit3000,
+            "rabbit3000a" => Rabbit3000A,
+            "tlcs90" => Tlcs90,
+            "r800" => R800,
             _ => return Err(()),
         })
     }
@@ -1362,6 +1442,12 @@ impl FromStr for Architecture {
                 } else if let Ok(clever) = CleverArchitecture::from_str(s) {
                     Clever(clever)
                 } else {
+                    #[cfg(feature = "arch_z80")]
+                    {
+                        if let Ok(z80) = Z80Architecture::from_str(s) {
+                            return Ok(Architecture::Z80(z80));
+                        }
+                    }
                     return Err(());
                 }
             }
@@ -1548,6 +1634,7 @@ impl FromStr for OperatingSystem {
             "bitrig" => Bitrig,
             "cloudabi" => Cloudabi,
             "cuda" => Cuda,
+            "cygwin" => Cygwin,
             "dragonfly" => Dragonfly,
             "emscripten" => Emscripten,
             "freebsd" => Freebsd,
@@ -1848,6 +1935,7 @@ mod tests {
             "riscv64gc-unknown-fuchsia",
             "riscv64gc-unknown-hermit",
             "riscv64gc-unknown-linux-gnu",
+            "riscv64a23-unknown-linux-gnu",
             "riscv64gc-unknown-linux-musl",
             "riscv64gc-unknown-netbsd",
             "riscv64gc-unknown-none-elf",
@@ -1898,6 +1986,7 @@ mod tests {
             "x86_64-linux-kernel", // Changed to x86_64-unknown-none-linuxkernel in 1.53.0
             "x86_64-apple-macosx",
             "x86_64-apple-macosx10.7.0",
+            "x86_64-pc-cygwin",
             "x86_64-pc-solaris",
             "x86_64-pc-windows-gnu",
             "x86_64-pc-windows-gnullvm",
@@ -1940,6 +2029,12 @@ mod tests {
             "xtensa-esp32s3-none-elf",
             #[cfg(feature = "arch_zkasm")]
             "zkasm-unknown-unknown",
+            #[cfg(feature = "arch_z80")]
+            "z80-zilog-none",
+            #[cfg(feature = "arch_z80")]
+            "sm83-nintendo-none",
+            #[cfg(feature = "arch_z80")]
+            "tlcs90-toshiba-none",
         ];
 
         for target in targets.iter() {
